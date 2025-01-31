@@ -11357,6 +11357,8 @@ paths:
         post:
             description: Build an image from the given Dockerfile(s)
             operationId: ImageBuild
+            consumes:
+                - application/x-tar
             parameters:
                 - default: application/x-tar
                   enum:
@@ -16173,6 +16175,9 @@ paths:
                 - networks
     /libpod/play/kube:
         delete:
+            consumes:
+                - text/plain
+                - application/x-tar
             description: Tears down pods, secrets, and volumes defined in a YAML file
             operationId: PlayKubeDownLibpod
             parameters:
@@ -16241,6 +16246,9 @@ paths:
                    image: foobar
                 ```
             operationId: PlayKubeLibpod
+            consumes:
+                - text/plain
+                - application/x-tar
             parameters:
                 - default: text/plain
                   enum:
