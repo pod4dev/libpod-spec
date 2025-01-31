@@ -16176,9 +16176,9 @@ paths:
             description: Tears down pods, secrets, and volumes defined in a YAML file
             operationId: PlayKubeDownLibpod
             parameters:
-                - default: plain/text
+                - default: text/plain
                   enum:
-                      - plain/text
+                      - text/plain
                       - application/x-tar
                   in: header
                   name: Content-Type
@@ -16211,7 +16211,7 @@ paths:
                 ### Content-Type
 
                 Then endpoint support two Content-Type
-                 - `plain/text` for yaml format
+                 - `text/plain` for yaml format
                  - `application/x-tar` for sending context(s) required for building images
 
                 #### Tar format
@@ -16242,9 +16242,9 @@ paths:
                 ```
             operationId: PlayKubeLibpod
             parameters:
-                - default: plain/text
+                - default: text/plain
                   enum:
-                    - plain/text
+                    - text/plain
                     - application/x-tar
                   in: header
                   name: Content-Type
