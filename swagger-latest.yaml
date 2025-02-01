@@ -13229,18 +13229,21 @@ paths:
                   items:
                     type: string
                   name: unsetenv
+                  collectionFormat: multi
                   type: array
                 - description: Unset the image label, causing the label not to be inherited from the base image.
                   in: query
                   items:
                     type: string
                   name: unsetlabel
+                  collectionFormat: multi
                   type: array
                 - description: Extra volumes that should be mounted in the build container.
                   in: query
                   items:
                     type: string
                   name: volume
+                  collectionFormat: multi
                   type: array
             produces:
                 - application/json
@@ -13283,6 +13286,7 @@ paths:
                   items:
                     type: string
                   name: changes
+                  collectionFormat: multi
                   type: array
                 - description: commit message
                   in: query
@@ -15241,6 +15245,7 @@ paths:
                   items:
                     type: string
                   name: references
+                  collectionFormat: multi
                   type: array
                 - description: use compression on image
                   in: query
@@ -15283,6 +15288,7 @@ paths:
                   items:
                     type: string
                   name: changes
+                  collectionFormat: multi
                   type: array
                 - description: Set commit message for imported image
                   in: query
@@ -16270,6 +16276,7 @@ paths:
                   items:
                     type: string
                   name: logOptions
+                  collectionFormat: multi
                   type: array
                 - description: USe the network mode or specify an array of networks.
                   in: query
@@ -16292,6 +16299,7 @@ paths:
                   items:
                     type: string
                   name: publishPorts
+                  collectionFormat: multi
                   type: array
                 - description: Whether to publish all ports defined in the K8S YAML file (containerPort, hostPort), if false only hostPort will be published
                   in: query
@@ -16317,6 +16325,7 @@ paths:
                   items:
                     type: string
                   name: staticIPs
+                  collectionFormat: multi
                   type: array
                 - description: Static MACs used for the pods.
                   in: query
