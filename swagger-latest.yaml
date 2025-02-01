@@ -13179,6 +13179,7 @@ paths:
                   items:
                     type: string
                   name: layerLabel
+                  collectionFormat: multi
                   type: array
                 - default: true
                   description: |
@@ -14273,6 +14274,7 @@ paths:
                   items:
                     type: string
                   name: ps_args
+                  collectionFormat: multi
                   type: array
             produces:
                 - application/json
@@ -14557,6 +14559,7 @@ paths:
                   items:
                     type: string
                   name: containers
+                  collectionFormat: multi
                   type: array
                 - default: true
                   description: Stream the output
@@ -14783,6 +14786,7 @@ paths:
                   items:
                     type: string
                   name: wants
+                  collectionFormat: multi
                   type: array
                 - default: []
                   description: Systemd After list for the container or pods.
@@ -14790,6 +14794,7 @@ paths:
                   items:
                     type: string
                   name: after
+                  collectionFormat: multi
                   type: array
                 - default: []
                   description: Systemd Requires list for the container or pods.
@@ -14804,6 +14809,7 @@ paths:
                   items:
                     type: string
                   name: additionalEnvVariables
+                  collectionFormat: multi
                   type: array
             produces:
                 - application/json
@@ -14831,6 +14837,7 @@ paths:
                     type: string
                   name: names
                   required: true
+                  collectionFormat: multi
                   type: array
                 - default: false
                   description: Generate YAML for a Kubernetes service object.
@@ -16332,6 +16339,7 @@ paths:
                   items:
                     type: string
                   name: staticMACs
+                  collectionFormat: multi
                   type: array
                 - default: true
                   description: Require HTTPS and verify signatures when contacting registries.
@@ -16719,6 +16727,7 @@ paths:
                   items:
                     type: string
                   name: namesOrIDs
+                  collectionFormat: multi
                   type: array
             produces:
                 - application/json
