@@ -906,11 +906,10 @@ definitions:
                 type: object
             base_hosts_file:
                 description: |-
-                    BaseHostsFile is the path to a hosts file, the entries from this file
-                    are added to the containers hosts file. As special value "image" is
-                    allowed which uses the /etc/hosts file from within the image and "none"
-                    which uses no base file at all. If it is empty we should default
-                    to the base_hosts_file configuration in containers.conf.
+                    BaseHostsFile is the base file to create the `/etc/hosts` file inside the container.
+                    This must either be an absolute path to a file on the host system, or one of the
+                    special flags `image` or `none`.
+                    If it is empty it defaults to the base_hosts_file configuration in containers.conf.
                     Optional.
                 type: string
                 x-go-name: BaseHostsFile
@@ -1013,6 +1012,13 @@ definitions:
                     Optional.
                 type: boolean
                 x-go-name: PublishExposedPorts
+            use_image_hostname:
+                description: |-
+                    UseImageHostname indicates that /etc/hostname should not be managed by
+                    Podman, and instead sourced from the image.
+                    Optional.
+                type: boolean
+                x-go-name: UseImageHostname
             use_image_hosts:
                 description: |-
                     UseImageHosts indicates that /etc/hosts should not be managed by
@@ -3713,6 +3719,10 @@ definitions:
                 $ref: '#/definitions/InspectContainerState'
             StaticDir:
                 type: string
+            UseImageHostname:
+                type: boolean
+            UseImageHosts:
+                type: boolean
             lockNumber:
                 format: uint32
                 type: integer
@@ -3999,6 +4009,9 @@ definitions:
                 items:
                     type: string
                 type: array
+            HostsFile:
+                description: HostsFile is the base file to create the `/etc/hosts` file inside the container.
+                type: string
             IDMappings:
                 $ref: '#/definitions/InspectIDMappings'
             IOMaximumBandwidth:
@@ -4820,6 +4833,11 @@ definitions:
                     HostNetwork is whether the infra container (and thus the whole pod)
                     will use the host's network and not create a network namespace.
                 type: boolean
+            HostsFile:
+                description: |-
+                    HostsFile is the base file to create the `/etc/hosts` file inside the infra container
+                    which will be shared with the rest of the pod.
+                type: string
             NetworkOptions:
                 additionalProperties:
                     items:
@@ -4832,6 +4850,11 @@ definitions:
                 items:
                     type: string
                 type: array
+            NoManageHostname:
+                description: |-
+                    NoManageHostname indicates that the pod will not manage /etc/hostname
+                    and instead each container will handle their own.
+                type: boolean
             NoManageHosts:
                 description: |-
                     NoManageHosts indicates that the pod will not manage /etc/hosts and
@@ -6495,6 +6518,9 @@ definitions:
                     type: string
                 type: array
                 x-go-name: AddHosts
+            hosts_file:
+                type: string
+                x-go-name: HostsFile
             netns:
                 $ref: '#/definitions/Namespace'
             network_alias:
@@ -6515,6 +6541,9 @@ definitions:
                     $ref: '#/definitions/PerNetworkOptions'
                 type: object
                 x-go-name: Networks
+            no_manage_hostname:
+                type: boolean
+                x-go-name: NoHostname
             no_manage_hosts:
                 type: boolean
                 x-go-name: NoHosts
@@ -6641,6 +6670,12 @@ definitions:
                     Optional in the frontend. Will be filled with ethX (where X is a integer) when empty.
                 type: string
                 x-go-name: InterfaceName
+            options:
+                additionalProperties:
+                    type: string
+                description: Driver-specific options for this container.
+                type: object
+                x-go-name: Options
             static_ips:
                 description: StaticIPs for this container. Optional.
                 items:
@@ -6988,6 +7023,12 @@ definitions:
                     Optional in the frontend. Will be filled with ethX (where X is a integer) when empty.
                 type: string
                 x-go-name: InterfaceName
+            options:
+                additionalProperties:
+                    type: string
+                description: Driver-specific options for this container.
+                type: object
+                x-go-name: Options
             static_ips:
                 description: StaticIPs for this container. Optional.
                 items:
@@ -7828,6 +7869,16 @@ definitions:
                     type: string
                 type: array
                 x-go-name: HostAdd
+            hostsFile:
+                description: |-
+                    HostsFile is the base file to create the `/etc/hosts` file inside the infra container.
+                    This must either be an absolute path to a file on the host system, or one of the
+                    special flags `image` or `none`.
+                    If it is empty it defaults to the base_hosts_file configuration in containers.conf.
+                    Conflicts with NoInfra=true and NoManageHosts.
+                    Optional.
+                type: string
+                x-go-name: HostsFile
             netns:
                 $ref: '#/definitions/Namespace'
             network_options:
@@ -7840,6 +7891,13 @@ definitions:
                     Optional.
                 type: object
                 x-go-name: NetworkOptions
+            no_manage_hostname:
+                description: |-
+                    NoManageHostname indicates that /etc/hostname should not be managed
+                    by the pod. Instead, each container will create a separate
+                    etc/hostname as they would if not in a pod.
+                type: boolean
+                x-go-name: NoManageHostname
             no_manage_hosts:
                 description: |-
                     NoManageHosts indicates that /etc/hosts should not be managed by the
@@ -8051,6 +8109,16 @@ definitions:
                     Optional.
                 type: string
                 x-go-name: Hostname
+            hostsFile:
+                description: |-
+                    HostsFile is the base file to create the `/etc/hosts` file inside the infra container.
+                    This must either be an absolute path to a file on the host system, or one of the
+                    special flags `image` or `none`.
+                    If it is empty it defaults to the base_hosts_file configuration in containers.conf.
+                    Conflicts with NoInfra=true and NoManageHosts.
+                    Optional.
+                type: string
+                x-go-name: HostsFile
             idmappings:
                 $ref: '#/definitions/IDMappingOptions'
             image_volumes:
@@ -8145,6 +8213,13 @@ definitions:
                     Optional.
                 type: boolean
                 x-go-name: NoInfra
+            no_manage_hostname:
+                description: |-
+                    NoManageHostname indicates that /etc/hostname should not be managed
+                    by the pod. Instead, each container will create a separate
+                    etc/hostname as they would if not in a pod.
+                type: boolean
+                x-go-name: NoManageHostname
             no_manage_hosts:
                 description: |-
                     NoManageHosts indicates that /etc/hosts should not be managed by the
@@ -9136,11 +9211,10 @@ definitions:
                 x-go-name: ApparmorProfile
             base_hosts_file:
                 description: |-
-                    BaseHostsFile is the path to a hosts file, the entries from this file
-                    are added to the containers hosts file. As special value "image" is
-                    allowed which uses the /etc/hosts file from within the image and "none"
-                    which uses no base file at all. If it is empty we should default
-                    to the base_hosts_file configuration in containers.conf.
+                    BaseHostsFile is the base file to create the `/etc/hosts` file inside the container.
+                    This must either be an absolute path to a file on the host system, or one of the
+                    special flags `image` or `none`.
+                    If it is empty it defaults to the base_hosts_file configuration in containers.conf.
                     Optional.
                 type: string
                 x-go-name: BaseHostsFile
@@ -9940,6 +10014,13 @@ definitions:
                     Optional.
                 type: boolean
                 x-go-name: UnsetEnvAll
+            use_image_hostname:
+                description: |-
+                    UseImageHostname indicates that /etc/hostname should not be managed by
+                    Podman, and instead sourced from the image.
+                    Optional.
+                type: boolean
+                x-go-name: UseImageHostname
             use_image_hosts:
                 description: |-
                     UseImageHosts indicates that /etc/hosts should not be managed by
@@ -10860,13 +10941,282 @@ definitions:
         title: UpdateConfig holds the mutable attributes of a Container.
         type: object
         x-go-package: github.com/docker/docker/api/types/container
+    UpdateContainerDevicesLimits:
+        properties:
+            BlkIOWeightDevice:
+                description: |-
+                    Block IO weight (relative device weight) in the form:
+                    ```[{"Path": "device_path", "Weight": weight}]```
+                items:
+                    $ref: '#/definitions/WeightDevice'
+                type: array
+            DeviceReadBPs:
+                description: |-
+                    Limit read rate (bytes per second) from a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceReadIOPs:
+                description: |-
+                    Limit read rate (IO per second) from a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceWriteBPs:
+                description: |-
+                    Limit write rate (bytes per second) to a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceWriteIOPs:
+                description: |-
+                    Limit write rate (IO per second) to a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+        type: object
+        x-go-package: github.com/containers/podman/v5/libpod/define
     UpdateEntities:
         description: UpdateEntities used to wrap the oci resource spec in a swagger model
         properties:
-            Resources:
-                $ref: '#/definitions/LinuxResources'
+            BlkIOWeightDevice:
+                description: |-
+                    Block IO weight (relative device weight) in the form:
+                    ```[{"Path": "device_path", "Weight": weight}]```
+                items:
+                    $ref: '#/definitions/WeightDevice'
+                type: array
+            DeviceReadBPs:
+                description: |-
+                    Limit read rate (bytes per second) from a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceReadIOPs:
+                description: |-
+                    Limit read rate (IO per second) from a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceWriteBPs:
+                description: |-
+                    Limit write rate (bytes per second) to a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            DeviceWriteIOPs:
+                description: |-
+                    Limit write rate (IO per second) to a device, in the form:
+                    ```[{"Path": "device_path", "Rate": rate}]```
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            blockIO:
+                $ref: '#/definitions/LinuxBlockIO'
+            cpu:
+                $ref: '#/definitions/LinuxCPU'
+            devices:
+                description: Devices configures the device allowlist.
+                items:
+                    $ref: '#/definitions/LinuxDeviceCgroup'
+                type: array
+                x-go-name: Devices
+            health_cmd:
+                description: HealthCmd set a healthcheck command for the container. ('none' disables the existing healthcheck)
+                type: string
+                x-go-name: HealthCmd
+            health_interval:
+                description: |-
+                    HealthInterval set an interval for the healthcheck.
+                    (a value of disable results in no automatic timer setup) Changing this setting resets timer.
+                type: string
+                x-go-name: HealthInterval
+            health_log_destination:
+                description: |-
+                    HealthLogDestination set the destination of the HealthCheck log.
+                    Directory path, local or events_logger (local use container state file)
+                    Warning: Changing this setting may cause the loss of previous logs!
+                type: string
+                x-go-name: HealthLogDestination
+            health_max_log_count:
+                description: |-
+                    HealthMaxLogCount set maximum number of attempts in the HealthCheck log file.
+                    ('0' value means an infinite number of attempts in the log file)
+                format: uint64
+                type: integer
+                x-go-name: HealthMaxLogCount
+            health_max_log_size:
+                description: |-
+                    HealthMaxLogSize set maximum length in characters of stored HealthCheck log.
+                    ('0' value means an infinite log length)
+                format: uint64
+                type: integer
+                x-go-name: HealthMaxLogSize
+            health_on_failure:
+                description: HealthOnFailure set the action to take once the container turns unhealthy.
+                type: string
+                x-go-name: HealthOnFailure
+            health_retries:
+                description: HealthRetries set the number of retries allowed before a healthcheck is considered to be unhealthy.
+                format: uint64
+                type: integer
+                x-go-name: HealthRetries
+            health_start_period:
+                description: HealthStartPeriod set the initialization time needed for a container to bootstrap.
+                type: string
+                x-go-name: HealthStartPeriod
+            health_startup_cmd:
+                description: HealthStartupCmd set a startup healthcheck command for the container.
+                type: string
+                x-go-name: HealthStartupCmd
+            health_startup_interval:
+                description: |-
+                    HealthStartupInterval set an interval for the startup healthcheck.
+                    Changing this setting resets the timer, depending on the state of the container.
+                type: string
+                x-go-name: HealthStartupInterval
+            health_startup_retries:
+                description: HealthStartupRetries set the maximum number of retries before the startup healthcheck will restart the container.
+                format: uint64
+                type: integer
+                x-go-name: HealthStartupRetries
+            health_startup_success:
+                description: |-
+                    HealthStartupSuccess set the number of consecutive successes before the startup healthcheck is marked as successful
+                    and the normal healthcheck begins (0 indicates any success will start the regular healthcheck)
+                format: uint64
+                type: integer
+                x-go-name: HealthStartupSuccess
+            health_startup_timeout:
+                description: HealthStartupTimeout set the maximum amount of time that the startup healthcheck may take before it is considered failed.
+                type: string
+                x-go-name: HealthStartupTimeout
+            health_timeout:
+                description: HealthTimeout set the maximum time allowed to complete the healthcheck before an interval is considered failed.
+                type: string
+                x-go-name: HealthTimeout
+            hugepageLimits:
+                description: Hugetlb limits (in bytes). Default to reservation limits if supported.
+                items:
+                    $ref: '#/definitions/LinuxHugepageLimit'
+                type: array
+                x-go-name: HugepageLimits
+            memory:
+                $ref: '#/definitions/LinuxMemory'
+            network:
+                $ref: '#/definitions/LinuxNetwork'
+            no_healthcheck:
+                description: Disable healthchecks on container.
+                type: boolean
+                x-go-name: NoHealthCheck
+            pids:
+                $ref: '#/definitions/LinuxPids'
+            rdma:
+                additionalProperties:
+                    $ref: '#/definitions/LinuxRdma'
+                description: |-
+                    Rdma resource restriction configuration.
+                    Limits are a set of key value pairs that define RDMA resource limits,
+                    where the key is device name and value is resource limits.
+                type: object
+                x-go-name: Rdma
+            unified:
+                additionalProperties:
+                    type: string
+                description: Unified resources.
+                type: object
+                x-go-name: Unified
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/api/handlers
+    UpdateHealthCheckConfig:
+        properties:
+            health_cmd:
+                description: HealthCmd set a healthcheck command for the container. ('none' disables the existing healthcheck)
+                type: string
+                x-go-name: HealthCmd
+            health_interval:
+                description: |-
+                    HealthInterval set an interval for the healthcheck.
+                    (a value of disable results in no automatic timer setup) Changing this setting resets timer.
+                type: string
+                x-go-name: HealthInterval
+            health_log_destination:
+                description: |-
+                    HealthLogDestination set the destination of the HealthCheck log.
+                    Directory path, local or events_logger (local use container state file)
+                    Warning: Changing this setting may cause the loss of previous logs!
+                type: string
+                x-go-name: HealthLogDestination
+            health_max_log_count:
+                description: |-
+                    HealthMaxLogCount set maximum number of attempts in the HealthCheck log file.
+                    ('0' value means an infinite number of attempts in the log file)
+                format: uint64
+                type: integer
+                x-go-name: HealthMaxLogCount
+            health_max_log_size:
+                description: |-
+                    HealthMaxLogSize set maximum length in characters of stored HealthCheck log.
+                    ('0' value means an infinite log length)
+                format: uint64
+                type: integer
+                x-go-name: HealthMaxLogSize
+            health_on_failure:
+                description: HealthOnFailure set the action to take once the container turns unhealthy.
+                type: string
+                x-go-name: HealthOnFailure
+            health_retries:
+                description: HealthRetries set the number of retries allowed before a healthcheck is considered to be unhealthy.
+                format: uint64
+                type: integer
+                x-go-name: HealthRetries
+            health_start_period:
+                description: HealthStartPeriod set the initialization time needed for a container to bootstrap.
+                type: string
+                x-go-name: HealthStartPeriod
+            health_startup_cmd:
+                description: HealthStartupCmd set a startup healthcheck command for the container.
+                type: string
+                x-go-name: HealthStartupCmd
+            health_startup_interval:
+                description: |-
+                    HealthStartupInterval set an interval for the startup healthcheck.
+                    Changing this setting resets the timer, depending on the state of the container.
+                type: string
+                x-go-name: HealthStartupInterval
+            health_startup_retries:
+                description: HealthStartupRetries set the maximum number of retries before the startup healthcheck will restart the container.
+                format: uint64
+                type: integer
+                x-go-name: HealthStartupRetries
+            health_startup_success:
+                description: |-
+                    HealthStartupSuccess set the number of consecutive successes before the startup healthcheck is marked as successful
+                    and the normal healthcheck begins (0 indicates any success will start the regular healthcheck)
+                format: uint64
+                type: integer
+                x-go-name: HealthStartupSuccess
+            health_startup_timeout:
+                description: HealthStartupTimeout set the maximum amount of time that the startup healthcheck may take before it is considered failed.
+                type: string
+                x-go-name: HealthStartupTimeout
+            health_timeout:
+                description: HealthTimeout set the maximum time allowed to complete the healthcheck before an interval is considered failed.
+                type: string
+                x-go-name: HealthTimeout
+            no_healthcheck:
+                description: Disable healthchecks on container.
+                type: boolean
+                x-go-name: NoHealthCheck
+        type: object
+        x-go-package: github.com/containers/podman/v5/libpod/define
     UsageData:
         description: |-
             UsageData Usage details about the volume. This information is used by the
@@ -11157,7 +11507,124 @@ definitions:
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/specgen
     containerUpdateRequest:
-        $ref: '#/definitions/UpdateConfig'
+        description: Container update
+        properties:
+            BlkioDeviceReadBps:
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            BlkioDeviceReadIOps:
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            BlkioDeviceWriteBps:
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            BlkioDeviceWriteIOps:
+                items:
+                    $ref: '#/definitions/ThrottleDevice'
+                type: array
+            BlkioWeight:
+                format: uint16
+                type: integer
+            BlkioWeightDevice:
+                items:
+                    $ref: '#/definitions/WeightDevice'
+                type: array
+            CgroupParent:
+                description: Applicable to UNIX platforms
+                type: string
+            CpuCount:
+                description: Applicable to Windows
+                format: int64
+                type: integer
+                x-go-name: CPUCount
+            CpuPercent:
+                format: int64
+                type: integer
+                x-go-name: CPUPercent
+            CpuPeriod:
+                format: int64
+                type: integer
+                x-go-name: CPUPeriod
+            CpuQuota:
+                format: int64
+                type: integer
+                x-go-name: CPUQuota
+            CpuRealtimePeriod:
+                format: int64
+                type: integer
+                x-go-name: CPURealtimePeriod
+            CpuRealtimeRuntime:
+                format: int64
+                type: integer
+                x-go-name: CPURealtimeRuntime
+            CpuShares:
+                description: Applicable to all platforms
+                format: int64
+                type: integer
+                x-go-name: CPUShares
+            CpusetCpus:
+                type: string
+            CpusetMems:
+                type: string
+            DeviceCgroupRules:
+                items:
+                    type: string
+                type: array
+            DeviceRequests:
+                items:
+                    $ref: '#/definitions/DeviceRequest'
+                type: array
+            Devices:
+                items:
+                    $ref: '#/definitions/DeviceMapping'
+                type: array
+            IOMaximumBandwidth:
+                format: uint64
+                type: integer
+            IOMaximumIOps:
+                format: uint64
+                type: integer
+            KernelMemory:
+                description: |-
+                    KernelMemory specifies the kernel memory limit (in bytes) for the container.
+                    Deprecated: kernel 5.4 deprecated kmem.limit_in_bytes.
+                format: int64
+                type: integer
+            KernelMemoryTCP:
+                format: int64
+                type: integer
+            Memory:
+                format: int64
+                type: integer
+            MemoryReservation:
+                format: int64
+                type: integer
+            MemorySwap:
+                format: int64
+                type: integer
+            MemorySwappiness:
+                format: int64
+                type: integer
+            NanoCpus:
+                format: int64
+                type: integer
+                x-go-name: NanoCPUs
+            OomKillDisable:
+                type: boolean
+            PidsLimit:
+                format: int64
+                type: integer
+            RestartPolicy:
+                $ref: '#/definitions/RestartPolicy'
+            Ulimits:
+                items:
+                    $ref: '#/definitions/Ulimit'
+                type: array
+        type: object
+        x-go-package: github.com/containers/podman/v5/pkg/api/handlers/swagger
     networkConnectRequest:
         $ref: '#/definitions/ConnectOptions'
     networkConnectRequestLibpod:
@@ -11387,6 +11854,11 @@ paths:
                   in: query
                   name: extrahosts
                   type: string
+                - description: |
+                    Not to create /etc/hosts when building the image
+                  in: query
+                  name: nohosts
+                  type: boolean
                 - description: |
                     A Git repository URI or HTTP/HTTPS context URI.
                     If the URI points to a single text file, the file’s contents are placed
@@ -13044,6 +13516,11 @@ paths:
                   name: extrahosts
                   type: string
                 - description: |
+                    Not to create /etc/hosts when building the image
+                  in: query
+                  name: nohosts
+                  type: boolean
+                - description: |
                     A Git repository URI or HTTP/HTTPS context URI.
                     If the URI points to a single text file, the file’s contents are placed
                     into a file called Dockerfile and the image is built from that file. If
@@ -14333,7 +14810,7 @@ paths:
                 - containers
     /libpod/containers/{name}/update:
         post:
-            description: Update an existing containers cgroup configuration.
+            description: Updates the configuration of an existing container, allowing changes to resource limits and healthchecks.
             operationId: ContainerUpdateLibpod
             parameters:
                 - description: Full or partial ID or full name of the container to update
@@ -14357,13 +14834,15 @@ paths:
             produces:
                 - application/json
             responses:
+                "201":
+                    $ref: '#/responses/containerUpdateResponse'
                 "400":
                     $ref: '#/responses/badParamError'
                 "404":
                     $ref: '#/responses/containerNotFound'
                 "500":
                     $ref: '#/responses/internalError'
-            summary: Update an existing containers cgroup configuration
+            summary: Updates the configuration of an existing container, allowing changes to resource limits and healthchecks
             tags:
                 - containers
     /libpod/containers/{name}/wait:
@@ -15671,6 +16150,10 @@ paths:
                   name: name
                   required: true
                   type: string
+                - description: Ignore if a specified manifest does not exist and do not throw an error.
+                  in: query
+                  name: ignore
+                  type: boolean
             produces:
                 - application/json
             responses:
@@ -17620,6 +18103,13 @@ responses:
         description: List processes in container
         schema:
             $ref: '#/definitions/ContainerTopOKBody'
+    containerUpdateResponse:
+        description: Update container
+        schema:
+            properties:
+                ID:
+                    type: string
+            type: object
     containerWaitResponse:
         description: Wait container
         schema:
