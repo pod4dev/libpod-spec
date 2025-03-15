@@ -11502,7 +11502,7 @@ definitions:
                 format: uint16
                 type: integer
         type: object
-        x-go-package: github.com/docker/docker/api/types/blkiodev
+        x-go-package: github.com/containers/podman/v5/libpod/define
     cacheLibImage:
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/specgen
