@@ -5871,11 +5871,6 @@ definitions:
         x-go-package: github.com/containers/podman/v5/pkg/specgen
     MacAddress:
         $ref: '#/definitions/HardwareAddr'
-        description: |-
-            HardwareAddr is the same as net.HardwareAddr except
-            that it adds the json marshal/unmarshal methods.
-            This allows us to read the mac from a json string
-            and a byte array.
     ManifestAddArtifactOptions:
         description: |-
             ManifestAddArtifactOptions provides the model for creating artifact manifests
