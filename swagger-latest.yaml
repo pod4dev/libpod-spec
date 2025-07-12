@@ -26,6 +26,41 @@ definitions:
         title: Address represents an IP address.
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
+    ArtifactVolume:
+        description: |-
+            ArtifactVolume is a volume based on a artifact. The artifact blobs will
+            be bind mounted directly as files and must always be read only.
+        properties:
+            destination:
+                description: |-
+                    Destination is the absolute path of the mount in the container.
+                    If path is a file in the container, then the artifact must consist of a single blob.
+                    Otherwise if it is a directory or does not exists all artifact blobs will be mounted
+                    into this path as files. As name the "org.opencontainers.image.title" will be used if
+                    available otherwise the digest is used as name.
+                type: string
+                x-go-name: Destination
+            digest:
+                description: |-
+                    Digest can be used to filter a single blob from a multi blob artifact by the given digest.
+                    When this option is set the file name in the container defaults to the digest even when
+                    the title annotation exist.
+                    Optional. Conflicts with Title.
+                type: string
+                x-go-name: Digest
+            source:
+                description: Source is the name or digest of the artifact that should be mounted
+                type: string
+                x-go-name: Source
+            title:
+                description: |-
+                    Title can be used for multi blob artifacts to only mount the one specific blob that
+                    matches the "org.opencontainers.image.title" annotation.
+                    Optional. Conflicts with Digest.
+                type: string
+                x-go-name: Title
+        type: object
+        x-go-package: github.com/containers/podman/v5/pkg/specgen
     AttestationProperties:
         properties:
             For:
@@ -413,6 +448,8 @@ definitions:
                 type: string
             ImageID:
                 type: string
+            ImageManifestDescriptor:
+                $ref: '#/definitions/Descriptor'
             Labels:
                 additionalProperties:
                     type: string
@@ -428,7 +465,7 @@ definitions:
                     type: string
                 type: array
             NetworkSettings:
-                $ref: '#/definitions/SummaryNetworkSettings'
+                $ref: '#/definitions/NetworkSettingsSummary'
             NetworkingConfig:
                 $ref: '#/definitions/NetworkingConfig'
             Platform:
@@ -824,73 +861,6 @@ definitions:
                 $ref: '#/definitions/StartupHealthCheck'
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/specgen
-    ContainerJSON:
-        description: ContainerJSON is newly used struct along with MountPoint
-        properties:
-            AppArmorProfile:
-                type: string
-            Args:
-                items:
-                    type: string
-                type: array
-            Config:
-                $ref: '#/definitions/Config'
-            Created:
-                type: string
-            Driver:
-                type: string
-            ExecIDs:
-                items:
-                    type: string
-                type: array
-            GraphDriver:
-                $ref: '#/definitions/GraphDriverData'
-            HostConfig:
-                $ref: '#/definitions/HostConfig'
-            HostnamePath:
-                type: string
-            HostsPath:
-                type: string
-            Id:
-                type: string
-                x-go-name: ID
-            Image:
-                type: string
-            LogPath:
-                type: string
-            MountLabel:
-                type: string
-            Mounts:
-                items:
-                    $ref: '#/definitions/MountPoint'
-                type: array
-            Name:
-                type: string
-            NetworkSettings:
-                $ref: '#/definitions/NetworkSettings'
-            Node:
-                $ref: '#/definitions/ContainerNode'
-            Path:
-                type: string
-            Platform:
-                type: string
-            ProcessLabel:
-                type: string
-            ResolvConfPath:
-                type: string
-            RestartCount:
-                format: int64
-                type: integer
-            SizeRootFs:
-                format: int64
-                type: integer
-            SizeRw:
-                format: int64
-                type: integer
-            State:
-                $ref: '#/definitions/ContainerState'
-        type: object
-        x-go-package: github.com/docker/docker/api/types
     ContainerNetworkConfig:
         description: |-
             ContainerNetworkConfig contains information on a container's network
@@ -1070,33 +1040,6 @@ definitions:
                 type: integer
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
-    ContainerNode:
-        description: 'Deprecated: ContainerNode was used for the classic Docker Swarm standalone API. It will be removed in the next release.'
-        properties:
-            Addr:
-                type: string
-            Cpus:
-                format: int64
-                type: integer
-            ID:
-                type: string
-            IP:
-                type: string
-                x-go-name: IPAddress
-            Labels:
-                additionalProperties:
-                    type: string
-                type: object
-            Memory:
-                format: int64
-                type: integer
-            Name:
-                type: string
-        title: |-
-            ContainerNode stores information about the node that a container
-            is running on.  It's only used by the Docker Swarm standalone API.
-        type: object
-        x-go-package: github.com/docker/docker/api/types
     ContainerResourceConfig:
         properties:
             intelRdt:
@@ -1325,39 +1268,6 @@ definitions:
                 x-go-name: RwSize
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/ps/define
-    ContainerState:
-        description: |-
-            ContainerState stores container's running state
-            it's part of ContainerJSONBase and will return by "inspect" command
-        properties:
-            Dead:
-                type: boolean
-            Error:
-                type: string
-            ExitCode:
-                format: int64
-                type: integer
-            FinishedAt:
-                type: string
-            Health:
-                $ref: '#/definitions/Health'
-            OOMKilled:
-                type: boolean
-            Paused:
-                type: boolean
-            Pid:
-                format: int64
-                type: integer
-            Restarting:
-                type: boolean
-            Running:
-                type: boolean
-            StartedAt:
-                type: string
-            Status:
-                type: string
-        type: object
-        x-go-package: github.com/docker/docker/api/types
     ContainerStats:
         description: ContainerStats contains the statistics information for a running container
         properties:
@@ -1420,6 +1330,12 @@ definitions:
             ContainerStorageConfig contains information on the storage configuration of a
             container.
         properties:
+            artifact_volumes:
+                description: ArtifactVolumes volumes based on an existing artifact.
+                items:
+                    $ref: '#/definitions/ArtifactVolume'
+                type: array
+                x-go-name: ArtifactVolumes
             chroot_directories:
                 description: |-
                     ChrootDirs is an additional set of directories that need to be
@@ -1678,11 +1594,10 @@ definitions:
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
     ContainerTopOKBody:
-        description: ContainerTopOKBody OK response to ContainerTop operation
         properties:
             Processes:
                 description: |-
-                    Each process running in the container, where each is process
+                    Each process running in the container, where each process
                     is an array of values corresponding to the titles.
                 items:
                     items:
@@ -1694,23 +1609,8 @@ definitions:
                 items:
                     type: string
                 type: array
-        required:
-            - Processes
-            - Titles
         type: object
-        x-go-package: github.com/docker/docker/api/types/container
-    ContainerUpdateOKBody:
-        description: ContainerUpdateOKBody OK response to ContainerUpdate operation
-        properties:
-            Warnings:
-                description: warnings
-                items:
-                    type: string
-                type: array
-        required:
-            - Warnings
-        type: object
-        x-go-package: github.com/docker/docker/api/types/container
+        x-go-package: github.com/containers/podman/v5/pkg/api/handlers
     ContainersPruneReport:
         properties:
             ContainersDeleted:
@@ -1836,6 +1736,8 @@ definitions:
             Driver:
                 description: Name of the volume driver to use.
                 type: string
+            EnableIPv4:
+                type: boolean
             EnableIPv6:
                 type: boolean
             IPAM:
@@ -1873,6 +1775,8 @@ definitions:
                 type: boolean
             Driver:
                 type: string
+            EnableIPv4:
+                type: boolean
             EnableIPv6:
                 type: boolean
             IPAM:
@@ -2077,16 +1981,27 @@ definitions:
         type: object
         x-go-package: github.com/docker/docker/api/types/mount
     DriverData:
-        description: DriverData handles the data for a storage driver
+        description: |-
+            DriverData Information about the storage driver used to store the container's and
+            image's filesystem.
         properties:
             Data:
                 additionalProperties:
                     type: string
+                description: |-
+                    Low-level storage metadata, provided as key/value pairs.
+
+                    This information is driver-specific, and depends on the storage-driver
+                    in use, and should be used for informational purposes only.
                 type: object
             Name:
+                description: Name of the storage driver.
                 type: string
+        required:
+            - Data
+            - Name
         type: object
-        x-go-package: github.com/containers/podman/v5/libpod/define
+        x-go-package: github.com/docker/docker/api/types/storage
     Duration:
         description: |-
             A Duration represents the elapsed time between two instants
@@ -2150,6 +2065,14 @@ definitions:
             GlobalIPv6Address:
                 type: string
             GlobalIPv6PrefixLen:
+                format: int64
+                type: integer
+            GwPriority:
+                description: |-
+                    GwPriority determines which endpoint will provide the default gateway
+                    for the container. The endpoint with the highest priority will be used.
+                    If multiple endpoints have the same priority, they are lexicographically
+                    sorted based on their network name, and the one that sorts first is picked.
                 format: int64
                 type: integer
             IPAMConfig:
@@ -2231,28 +2154,6 @@ definitions:
         title: FilesystemChange Change in the container's filesystem.
         type: object
         x-go-package: github.com/docker/docker/api/types/container
-    GraphDriverData:
-        description: |-
-            GraphDriverData Information about the storage driver used to store the container's and
-            image's filesystem.
-        properties:
-            Data:
-                additionalProperties:
-                    type: string
-                description: |-
-                    Low-level storage metadata, provided as key/value pairs.
-
-                    This information is driver-specific, and depends on the storage-driver
-                    in use, and should be used for informational purposes only.
-                type: object
-            Name:
-                description: Name of the storage driver.
-                type: string
-        required:
-            - Data
-            - Name
-        type: object
-        x-go-package: github.com/docker/docker/api/types
     HardwareAddr:
         items:
             format: uint8
@@ -2273,7 +2174,7 @@ definitions:
             Status:
                 type: string
         type: object
-        x-go-package: github.com/docker/docker/api/types
+        x-go-package: github.com/docker/docker/api/types/container
     HealthCheckLog:
         description: HealthCheckLog describes the results of a single healthcheck
         properties:
@@ -2362,7 +2263,7 @@ definitions:
                 format: date-time
                 type: string
         type: object
-        x-go-package: github.com/docker/docker/api/types
+        x-go-package: github.com/docker/docker/api/types/container
     History:
         properties:
             author:
@@ -2868,7 +2769,15 @@ definitions:
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
     IDResponse:
-        $ref: '#/definitions/IdResponse'
+        properties:
+            Id:
+                description: The id of the newly created object.
+                type: string
+                x-go-name: ID
+        required:
+            - Id
+        type: object
+        x-go-package: github.com/containers/podman/v5/pkg/domain/entities/types
     IPAM:
         description: IPAM represents IP Address Management
         properties:
@@ -2919,18 +2828,6 @@ definitions:
         title: An IPNet represents an IP network.
         type: object
         x-go-package: net
-    IdResponse:
-        description: IDResponse Response to an API call that returns just an Id
-        properties:
-            Id:
-                description: The id of the newly created object.
-                type: string
-                x-go-name: ID
-        required:
-            - Id
-        type: object
-        x-go-name: IDResponse
-        x-go-package: github.com/docker/docker/api/types
     ImageConfig:
         properties:
             ArgsEscaped:
@@ -3090,6 +2987,8 @@ definitions:
                     This information is only available if present in the image,
                     and omitted otherwise.
                 type: string
+            Descriptor:
+                $ref: '#/definitions/Descriptor'
             DockerVersion:
                 description: |-
                     DockerVersion is the version of Docker that was used to build the image.
@@ -3097,7 +2996,7 @@ definitions:
                     Depending on how the image was created, this field may be empty.
                 type: string
             GraphDriver:
-                $ref: '#/definitions/GraphDriverData'
+                $ref: '#/definitions/DriverData'
             Id:
                 description: |-
                     ID is the content-addressable ID of an image.
@@ -3110,6 +3009,20 @@ definitions:
                     holds digests of image manifests that reference the image.
                 type: string
                 x-go-name: ID
+            Manifests:
+                description: |-
+                    Manifests is a list of image manifests available in this image. It
+                    provides a more detailed view of the platform-specific image manifests or
+                    other image-attached data like build attestations.
+
+                    Only available if the daemon provides a multi-platform image store, the client
+                    requests manifests AND does not request a specific platform.
+
+                    WARNING: This is experimental and may change at any time without any backward
+                    compatibility.
+                items:
+                    $ref: '#/definitions/ManifestSummary'
+                type: array
             Metadata:
                 $ref: '#/definitions/Metadata'
             Os:
@@ -3178,6 +3091,12 @@ definitions:
                 type: array
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/domain/entities/types
+    ImageOptions:
+        properties:
+            Subpath:
+                type: string
+        type: object
+        x-go-package: github.com/docker/docker/api/types/mount
     ImageProperties:
         properties:
             Containers:
@@ -3303,6 +3222,8 @@ definitions:
                 type: string
             Driver:
                 type: string
+            EnableIPv4:
+                type: boolean
             EnableIPv6:
                 type: boolean
             IPAM:
@@ -3734,7 +3655,14 @@ definitions:
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
     InspectContainerHostConfig:
-        description: nolint:revive,stylecheck // Field names are fixed for compatibility and cannot be changed.
+        description: |-
+            InspectContainerHostConfig holds information used when the container was
+            created.
+            It's very much a Docker-specific struct, retained (mostly) as-is for
+            compatibility. We fill individual fields as best as we can, inferring as much
+            as possible from the spec and container config.
+            Some things cannot be inferred. These will be populated by spec annotations
+            (if available).
         properties:
             Annotations:
                 additionalProperties:
@@ -4239,14 +4167,6 @@ definitions:
                 items:
                     type: string
                 type: array
-        title: |-
-            InspectContainerHostConfig holds information used when the container was
-            created.
-            It's very much a Docker-specific struct, retained (mostly) as-is for
-            compatibility. We fill individual fields as best as we can, inferring as much
-            as possible from the spec and container config.
-            Some things cannot be inferred. These will be populated by spec annotations
-            (if available).
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
     InspectContainerState:
@@ -4917,6 +4837,74 @@ definitions:
                 x-go-name: UtsNS
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
+    InspectResponse:
+        description: endpoint.
+        properties:
+            AppArmorProfile:
+                type: string
+            Args:
+                items:
+                    type: string
+                type: array
+            Config:
+                $ref: '#/definitions/Config'
+            Created:
+                type: string
+            Driver:
+                type: string
+            ExecIDs:
+                items:
+                    type: string
+                type: array
+            GraphDriver:
+                $ref: '#/definitions/DriverData'
+            HostConfig:
+                $ref: '#/definitions/HostConfig'
+            HostnamePath:
+                type: string
+            HostsPath:
+                type: string
+            Id:
+                type: string
+                x-go-name: ID
+            Image:
+                type: string
+            ImageManifestDescriptor:
+                $ref: '#/definitions/Descriptor'
+            LogPath:
+                type: string
+            MountLabel:
+                type: string
+            Mounts:
+                items:
+                    $ref: '#/definitions/MountPoint'
+                type: array
+            Name:
+                type: string
+            NetworkSettings:
+                $ref: '#/definitions/NetworkSettings'
+            Path:
+                type: string
+            Platform:
+                type: string
+            ProcessLabel:
+                type: string
+            ResolvConfPath:
+                type: string
+            RestartCount:
+                format: int64
+                type: integer
+            SizeRootFs:
+                format: int64
+                type: integer
+            SizeRw:
+                format: int64
+                type: integer
+            State:
+                $ref: '#/definitions/State'
+        title: InspectResponse is the response for the GET "/containers/{name:.*}/json"
+        type: object
+        x-go-package: github.com/docker/docker/api/types/container
     InspectRestartPolicy:
         properties:
             MaximumRetryCount:
@@ -6366,6 +6354,8 @@ definitions:
                 $ref: '#/definitions/ClusterOptions'
             Consistency:
                 $ref: '#/definitions/Consistency'
+            ImageOptions:
+                $ref: '#/definitions/ImageOptions'
             ReadOnly:
                 type: boolean
             Source:
@@ -6426,7 +6416,7 @@ definitions:
                 $ref: '#/definitions/Type'
         title: MountPoint represents a mount point configuration inside the container.
         type: object
-        x-go-package: github.com/docker/docker/api/types
+        x-go-package: github.com/docker/docker/api/types/container
     NamedVolume:
         description: |-
             NamedVolume holds information about a named volume that will be mounted into
@@ -6899,7 +6889,18 @@ definitions:
                     $ref: '#/definitions/Address'
                 type: array
         type: object
-        x-go-package: github.com/docker/docker/api/types
+        x-go-package: github.com/docker/docker/api/types/container
+    NetworkSettingsSummary:
+        description: |-
+            NetworkSettingsSummary provides a summary of container's networks
+            in /containers/json
+        properties:
+            Networks:
+                additionalProperties:
+                    $ref: '#/definitions/EndpointSettings'
+                type: object
+        type: object
+        x-go-package: github.com/docker/docker/api/types/container
     NetworkUpdateOptions:
         description: NetworkUpdateOptions describes options to update a network
         properties:
@@ -7953,24 +7954,8 @@ definitions:
         x-go-package: github.com/containers/podman/v5/pkg/domain/entities/types
     PodResourceConfig:
         properties:
-            cpu_period:
-                description: CPU period of the cpuset, determined by --cpus
-                format: uint64
-                type: integer
-                x-go-name: CPUPeriod
-            cpu_quota:
-                description: CPU quota of the cpuset, determined by --cpus
-                format: int64
-                type: integer
-                x-go-name: CPUQuota
             resource_limits:
                 $ref: '#/definitions/LinuxResources'
-            throttleReadBpsDevice:
-                additionalProperties:
-                    $ref: '#/definitions/LinuxThrottleDevice'
-                description: ThrottleReadBpsDevice contains the rate at which the devices in the pod can be read from/accessed
-                type: object
-                x-go-name: ThrottleReadBpsDevice
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/specgen
     PodRestartReport:
@@ -8041,16 +8026,6 @@ definitions:
                     type: string
                 type: array
                 x-go-name: CNINetworks
-            cpu_period:
-                description: CPU period of the cpuset, determined by --cpus
-                format: uint64
-                type: integer
-                x-go-name: CPUPeriod
-            cpu_quota:
-                description: CPU quota of the cpuset, determined by --cpus
-                format: int64
-                type: integer
-                x-go-name: CPUQuota
             dns_option:
                 description: |-
                     DNSOption is a set of DNS options that will be used in the infra
@@ -8347,12 +8322,6 @@ definitions:
                 description: Sysctl sets kernel parameters for the pod
                 type: object
                 x-go-name: Sysctl
-            throttleReadBpsDevice:
-                additionalProperties:
-                    $ref: '#/definitions/LinuxThrottleDevice'
-                description: ThrottleReadBpsDevice contains the rate at which the devices in the pod can be read from/accessed
-                type: object
-                x-go-name: ThrottleReadBpsDevice
             userns:
                 $ref: '#/definitions/Namespace'
             utsns:
@@ -8518,7 +8487,7 @@ definitions:
         properties:
             Processes:
                 description: |-
-                    Each process running in the container, where each is process
+                    Each process running in the container, where each process
                     is an array of values corresponding to the titles.
                 items:
                     items:
@@ -8530,9 +8499,6 @@ definitions:
                 items:
                     type: string
                 type: array
-        required:
-            - Processes
-            - Titles
         type: object
         x-go-package: github.com/containers/podman/v5/pkg/api/handlers
     PodUnpauseReport:
@@ -8566,7 +8532,7 @@ definitions:
             - PrivatePort
             - Type
         type: object
-        x-go-package: github.com/docker/docker/api/types
+        x-go-package: github.com/docker/docker/api/types/container
     PortBinding:
         description: PortBinding represents a binding between a Host IP address and a Host Port
         properties:
@@ -9213,6 +9179,12 @@ definitions:
                     Optional.
                 type: string
                 x-go-name: ApparmorProfile
+            artifact_volumes:
+                description: ArtifactVolumes volumes based on an existing artifact.
+                items:
+                    $ref: '#/definitions/ArtifactVolume'
+                type: array
+                x-go-name: ArtifactVolumes
             base_hosts_file:
                 description: |-
                     BaseHostsFile is the base file to create the `/etc/hosts` file inside the container.
@@ -10140,6 +10112,39 @@ definitions:
         title: StartupHealthCheck is the configuration of a startup healthcheck.
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
+    State:
+        description: |-
+            State stores container's running state
+            it's part of ContainerJSONBase and returned by "inspect" command
+        properties:
+            Dead:
+                type: boolean
+            Error:
+                type: string
+            ExitCode:
+                format: int64
+                type: integer
+            FinishedAt:
+                type: string
+            Health:
+                $ref: '#/definitions/Health'
+            OOMKilled:
+                type: boolean
+            Paused:
+                type: boolean
+            Pid:
+                format: int64
+                type: integer
+            Restarting:
+                type: boolean
+            Running:
+                type: boolean
+            StartedAt:
+                type: string
+            Status:
+                type: string
+        type: object
+        x-go-package: github.com/docker/docker/api/types/container
     StoreInfo:
         description: |-
             StoreInfo describes the container storage and its
@@ -10231,6 +10236,8 @@ definitions:
                     (number of seconds since EPOCH).
                 format: int64
                 type: integer
+            Descriptor:
+                $ref: '#/definitions/Descriptor'
             Id:
                 description: |-
                     ID is the content-addressable ID of an image.
@@ -10323,17 +10330,6 @@ definitions:
             - Size
         type: object
         x-go-package: github.com/docker/docker/api/types/image
-    SummaryNetworkSettings:
-        description: |-
-            SummaryNetworkSettings provides a summary of container's networks
-            in /containers/json
-        properties:
-            Networks:
-                additionalProperties:
-                    $ref: '#/definitions/EndpointSettings'
-                type: object
-        type: object
-        x-go-package: github.com/docker/docker/api/types
     SystemCheckReport:
         description: |-
             SystemCheckReport provides a report of what a storage consistency check
@@ -10596,6 +10592,26 @@ definitions:
         title: TmpfsOptions defines options specific to mounts of type "tmpfs".
         type: object
         x-go-package: github.com/docker/docker/api/types/mount
+    TopResponse:
+        description: Container "top" response.
+        properties:
+            Processes:
+                description: |-
+                    Each process running in the container, where each process
+                    is an array of values corresponding to the titles.
+                items:
+                    items:
+                        type: string
+                    type: array
+                type: array
+            Titles:
+                description: The ps column titles
+                items:
+                    type: string
+                type: array
+        title: TopResponse ContainerTopResponse
+        type: object
+        x-go-package: github.com/docker/docker/api/types/container
     Topology:
         description: |-
             This description is taken verbatim from the CSI Spec:
@@ -11026,6 +11042,14 @@ definitions:
                 items:
                     $ref: '#/definitions/ThrottleDevice'
                 type: array
+            Env:
+                items:
+                    type: string
+                type: array
+            UnsetEnv:
+                items:
+                    type: string
+                type: array
             blockIO:
                 $ref: '#/definitions/LinuxBlockIO'
             cpu:
@@ -11225,6 +11249,17 @@ definitions:
                 x-go-name: NoHealthCheck
         type: object
         x-go-package: github.com/containers/podman/v5/libpod/define
+    UpdateResponse:
+        description: Response for a successful container-update.
+        properties:
+            Warnings:
+                description: Warnings encountered when updating the container.
+                items:
+                    type: string
+                type: array
+        title: UpdateResponse ContainerUpdateResponse
+        type: object
+        x-go-package: github.com/docker/docker/api/types/container
     UsageData:
         description: |-
             UsageData Usage details about the volume. This information is used by the
@@ -11903,6 +11938,13 @@ paths:
                     (As of Podman version v5.2)
                   in: query
                   name: compatvolumes
+                  type: boolean
+                - default: true
+                  description: |
+                    Inherit the labels from the base image or base stages
+                    (As of Podman version v5.5)
+                  in: query
+                  name: inheritlabels
                   type: boolean
                 - default: false
                   description: |
@@ -13552,6 +13594,13 @@ paths:
                     (As of Podman version v5.2)
                   in: query
                   name: compatvolumes
+                  type: boolean
+                - default: true
+                  description: |
+                    Inherit the labels from the base image or base stages
+                    (As of Podman version v5.5)
+                  in: query
+                  name: inheritlabels
                   type: boolean
                 - default: false
                   description: |
@@ -18088,7 +18137,7 @@ responses:
     containerInspectResponse:
         description: Inspect container
         schema:
-            $ref: '#/definitions/ContainerJSON'
+            $ref: '#/definitions/InspectResponse'
     containerInspectResponseLibpod:
         description: Inspect container
         schema:
